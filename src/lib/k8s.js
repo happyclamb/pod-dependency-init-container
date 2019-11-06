@@ -5,7 +5,7 @@ const { namespace, podLabels } = require('./config');
 const client = new Client({ config: config.getInCluster() });
 let specLoaded = false;
 
-const getRunningPods = async () => {
+const checkRunningPods = async () => {
   try {
     if (!specLoaded) {
       await client.loadSpec();
@@ -13,14 +13,14 @@ const getRunningPods = async () => {
     }
 
     const podLabelArray = podLabels.split(',').map(label => label.trim());
-    const podsRunning = await Promise.all(
+    const podsNotRunning = await Promise.all(
         podLabelArray.map(async podLabel => {
           const response = await client.api.v1.namespaces(namespace).pods.get({ qs: { labelSelector: podLabel, fieldSelector: 'status.phase=Running' } });
-          return (response.body.items.length);
+          return (response.body.items.length > 0 ? null : podLabel);
         })
     );
 
-    return(podsRunning.every(podCount => podCount > 0));
+    return(podsNotRunning.filter(podName => podName != null));
 
   } catch (error) {
     throw (error);
@@ -28,5 +28,5 @@ const getRunningPods = async () => {
 };
 
 module.exports = {
-  getRunningPods
+  checkRunningPods
 };

@@ -1,4 +1,4 @@
-const { getRunningPods } = require('./lib/k8s');
+const { checkRunningPods } = require('./lib/k8s');
 const { podLabels, namespace, maxRetry, retryTimeOut } = require('./lib/config');
 
 const CurrentDate = () => { };
@@ -12,14 +12,16 @@ console.info(`Using namespace '${namespace}' and looking for podLabels ${podLabe
 const checkIfPodsRunning = async () => {
   try {
     console.info(`Checking for running pods try ${noOfTrys}`);
-    const podsRunning = await getRunningPods();
-    if (podsRunning === true) {
-      console.info(`Found running pod with label(s) ${podLabels}`);
+    const podsNotRunning = await checkRunningPods();
+    if (podsNotRunning.length === 0) {
+      console.info(`Found running pods with label(s) ${podLabels}`);
       process.exit(0);
     } else if (noOfTrys < maxRetry) {
+      console.info(`Following pods not found: ${podsNotRunning.toString()}`);
       setTimeout(checkIfPodsRunning, retryTimeOut);
     } else {
-      console.error(`Didn't find any running pod with label(s) ${podLabels} after ${noOfTrys} try(s)`);
+      console.error(`Following pod(s) not running: ${podsNotRunning.toString()}`);
+      console.error(`Didn't find running pods with label(s) ${podLabels} after ${noOfTrys} try(s)`);
       process.exit(1);
     }
     noOfTrys++;
